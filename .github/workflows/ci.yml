@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -20,23 +19,23 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install dependencies
-      run: |
-        python -m venv venv
-        . venv/bin/activate
-        pip install --upgrade pip
-
     - name: Run script
       id: run_script
       run: |
-        . venv/bin/activate
-        output=$(python script.py)
+        python script.py > output.txt
+        output=$(<output.txt)
         echo "::set-output name=script_output::$output"
 
     - name: Comment on PR
       if: github.event_name == 'pull_request'
-      uses: marocchino/sticky-pull-request-comment@v2
+      uses: actions/github-script@v6
       with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        header: script output
-        message: ${{ steps.run_script.outputs.script_output }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `${{ steps.run_script.outputs.script_output }}`
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `Script output: ${output}`
+          })
